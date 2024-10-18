@@ -7,6 +7,8 @@ pragma solidity ^0.8.0;
 /******************************************************************************/
 import {IDiamondCut} from "../interfaces/IDiamondCut.sol";
 
+import "@openzeppelin/contracts/utils/Counters.sol";
+
 library LibDiamond {
     error InValidFacetCutAction();
     error NotDiamondOwner();
@@ -47,6 +49,23 @@ library LibDiamond {
         mapping(bytes4 => bool) supportedInterfaces;
         // owner of the contract
         address contractOwner;
+
+        // ERC721 storage
+        string name;
+        string symbol;
+        mapping(uint256 => address) owners;
+        mapping(address => uint256) balances;
+        mapping(uint256 => address) tokenApprovals;
+        mapping(address => mapping(address => bool)) operatorApprovals;
+        Counters.Counter tokenIds;
+        uint256 maxSupply;
+
+        // Merkle storage
+        bytes32 merkleRoot;
+        mapping(address => bool) claimed;
+
+        // Presale storage
+        bool presaleActive;
     }
 
     function diamondStorage()
