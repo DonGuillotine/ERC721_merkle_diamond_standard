@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
+import "forge-std/console.sol";
+import "./JSONReader.sol";
 import "../contracts/Diamond.sol";
 import "../contracts/facets/DiamondCutFacet.sol";
 import "../contracts/facets/DiamondLoupeFacet.sol";
@@ -14,7 +16,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "./helpers/DiamondUtils.sol";
 
-contract DiamondTest is Test, DiamondUtils, IERC721Receiver {
+contract DiamondTest is Test, DiamondUtils, IERC721Receiver, JSONReader {
     Diamond diamond;
     DiamondCutFacet diamondCutFacet;
     DiamondLoupeFacet diamondLoupeFacet;
@@ -22,6 +24,12 @@ contract DiamondTest is Test, DiamondUtils, IERC721Receiver {
     ERC721Facet erc721Facet;
     MerkleFacet merkleFacet;
     PresaleFacet presaleFacet;
+
+    bytes32 merkleRoot;
+    bytes32[][] merkleProofs;
+    address[] whitelistAddresses;
+    uint256[] whitelistAmounts;
+
 
     function onERC721Received(
         address,
@@ -45,6 +53,28 @@ contract DiamondTest is Test, DiamondUtils, IERC721Receiver {
         erc721Facet = new ERC721Facet();
         merkleFacet = new MerkleFacet();
         presaleFacet = new PresaleFacet();
+
+        string memory jsonData = readJSONFile("merkleData.json");
+        console.log("JSON data:", jsonData);
+
+        bytes memory rootData = vm.parseJson(jsonData, ".root");
+        require(rootData.length > 0, "Failed to parse root");
+        merkleRoot = abi.decode(rootData, (bytes32));
+
+        bytes memory addressesData = vm.parseJson(jsonData, ".addresses");
+        require(addressesData.length > 0, "Failed to parse addresses");
+        whitelistAddresses = abi.decode(addressesData, (address[]));
+
+        bytes memory amountsData = vm.parseJson(jsonData, ".amounts");
+        require(amountsData.length > 0, "Failed to parse amounts");
+        whitelistAmounts = abi.decode(amountsData, (uint256[]));
+
+        bytes memory proofsData = vm.parseJson(jsonData, ".proofs");
+        require(proofsData.length > 0, "Failed to parse proofs");
+        merkleProofs = abi.decode(proofsData, (bytes32[][]));
+
+        require(whitelistAddresses.length == whitelistAmounts.length, "Mismatch in addresses and amounts");
+        require(whitelistAddresses.length == merkleProofs.length, "Mismatch in addresses and proofs");
 
         // Add facets to Diamond
         IDiamondCut.FacetCut[] memory cut = new IDiamondCut.FacetCut[](5);
@@ -117,18 +147,33 @@ contract DiamondTest is Test, DiamondUtils, IERC721Receiver {
     }
 
     function testMerkleFunctionality() public {
-        // For this test, we'll need to generate a valid merkle root and proof
-        // This is a simplified example and won't actually verify a real merkle proof
-        bytes32 mockRoot = keccak256(abi.encodePacked("mock root"));
-        (bool success,) = address(diamond).call(abi.encodeWithSignature("setMerkleRoot(bytes32)", mockRoot));
+        // Set the merkle root
+        (bool success,) = address(diamond).call(abi.encodeWithSignature("setMerkleRoot(bytes32)", merkleRoot));
         require(success, "Setting merkle root failed");
 
-        bytes32[] memory mockProof = new bytes32[](1);
-        mockProof[0] = keccak256(abi.encodePacked("mock proof"));
+        // Test claiming for each address in the whitelist
+        for (uint i = 0; i < whitelistAddresses.length; i++) {
+            address claimer = whitelistAddresses[i];
+            uint256 amount = whitelistAmounts[i];
+            bytes32[] memory proof = merkleProofs[i];
 
-        (success,) = address(diamond).call(abi.encodeWithSignature("claim(bytes32[],uint256)", mockProof, 1));
-        // This will fail because we're not providing a valid proof
-        assertTrue(!success, "Claim should fail with invalid proof");
+            vm.prank(claimer);
+            (success,) = address(diamond).call(abi.encodeWithSignature("claim(bytes32[],uint256)", proof, amount));
+            require(success, "Claim failed");
+
+            // Try to claim again (should fail)
+            vm.prank(claimer);
+            (success,) = address(diamond).call(abi.encodeWithSignature("claim(bytes32[],uint256)", proof, amount));
+            require(!success, "Double claim should fail");
+        }
+
+        // Try to claim with an invalid proof
+        address invalidClaimer = address(0x9999);
+        bytes32[] memory invalidProof = new bytes32[](1);
+        invalidProof[0] = bytes32(0);
+        vm.prank(invalidClaimer);
+        (success,) = address(diamond).call(abi.encodeWithSignature("claim(bytes32[],uint256)", invalidProof, 1000));
+        require(!success, "Claim with invalid proof should fail");
     }
 
     function testDiamondLoupeFunctionality() public {

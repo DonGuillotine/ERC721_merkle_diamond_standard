@@ -7,7 +7,7 @@ interface Claim {
   amount: number;
 }
 
-// Sample whitelist data
+// Whitelist data
 const whitelist: Claim[] = [
   { address: '0x1111111111111111111111111111111111111111', amount: 100 },
   { address: '0x2222222222222222222222222222222222222222', amount: 200 },
@@ -39,12 +39,14 @@ const proofs = whitelist.map((claim, index) => ({
 
 // Create output object
 const output = {
-  root,
-  proofs
-};
-
-// Write to file
-fs.writeFileSync('merkleData.json', JSON.stringify(output, null, 2));
+    root: root,
+    addresses: whitelist.map(w => w.address),
+    amounts: whitelist.map(w => w.amount),
+    proofs: proofs.map(p => p.proof)
+  };
+  
+  // Write to file
+  fs.writeFileSync('merkleData.json', JSON.stringify(output, null, 2));
 
 console.log('Merkle root:', root);
 console.log('Merkle data written to merkleData.json');
