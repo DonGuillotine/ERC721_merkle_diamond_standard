@@ -1,39 +1,98 @@
-[![Mentioned in Awesome Foundry](https://awesome.re/mentioned-badge-flat.svg)](https://github.com/crisgarner/awesome-foundry)
-# Foundry + Hardhat Diamonds
+# ERC721 NFT with Merkle Distributor
 
-This is a mimimal template for [Diamonds](https://github.com/ethereum/EIPs/issues/2535) which allows facet selectors to be generated on the go in solidity tests!
+This project implements an ERC721 NFT contract with a Merkle distributor for whitelisted addresses using the Diamond Standard (EIP-2535). It's built using the Diamond Standard, Foundry framework and includes a presale mechanism.
+
+## Features
+
+- ERC721 NFT implementation
+- Merkle-based whitelist distribution
+- Presale functionality
+- Diamond Standard (EIP-2535) for upgradeable contracts
+- Foundry for testing and deployment
+
+## Prerequisites
+
+- [Foundry](https://book.getfoundry.sh/getting-started/installation.html)
+- [Node.js](https://nodejs.org/) (for Merkle tree generation script)
 
 ## Installation
 
-- Clone this repo
-- Install dependencies
+1. Clone the repository:
+   ```
+   git clone https://github.com/DonGuillotine/ERC721_merkle_diamond_standard.git
+   cd ERC721_merkle_diamond_standard
+   ```
 
-```bash
-$ yarn && forge update
+2. Install Node.js dependencies:
+   ```
+   npm install
+   ```
+
+3. Install Foundry dependencies:
+   ```
+   forge install
+   ```
+
+## Usage
+
+### Generate Merkle Tree
+
+To generate the Merkle tree and proofs:
+
+```
+npx ts-node scripts/generateMerkleTree.ts
 ```
 
-### Compile
+This will create a `merkleData.json` file in the root directory.
 
-```bash
-$ npx hardhat compile
+### Run Tests
+
+To run the Foundry tests:
+
+```
+forge test
 ```
 
-## Deployment
+For more detailed output:
 
-### Hardhat
-
-```bash
-$ npx hardhat run scripts/deploy.js
+```
+forge test -vv
 ```
 
-### Foundry
+All Tests Passed
 
-```bash
-$ forge t
+![Screenshot 2024-10-18 175045](https://github.com/user-attachments/assets/4eeb324c-fb71-49f4-a8f1-e515b8910c04)
+
+
+### Deployment
+
+To deploy the contracts (make sure to set up your .env file first):
+
+```
+forge script script/deploy.s.sol:DeployDiamond --rpc-url <YOUR_RPC_URL> --broadcast --verify
 ```
 
-`Note`: A lot of improvements are still needed so contributions are welcome!!
+## Project Structure
 
-Bonus: The [DiamondLoupefacet](contracts/facets/DiamondLoupeFacet.sol) uses an updated [LibDiamond](contracts/libraries//LibDiamond.sol) which utilises solidity custom errors to make debugging easier especially when upgrading diamonds. Take it for a spin!!
+- `contracts/`: Solidity smart contracts
+  - `facets/`: Diamond facets (ERC721Facet, MerkleFacet, PresaleFacet)
+  - `interfaces/`: Contract interfaces
+  - `libraries/`: Helper libraries
+- `scripts/`: TypeScript and deployment scripts
+- `test/`: Foundry test files
 
-Need some more clarity? message me [on twitter](https://twitter.com/Timidan_x), Or join the [EIP-2535 Diamonds Discord server](https://discord.gg/kQewPw2)
+## Key Components
+
+1. **Diamond.sol**: The main contract implementing the Diamond Standard.
+2. **ERC721Facet.sol**: Implements the ERC721 standard.
+3. **MerkleFacet.sol**: Handles the Merkle-based whitelist distribution.
+4. **PresaleFacet.sol**: Manages the presale functionality.
+5. **generateMerkleTree.ts**: Script to generate Merkle tree and proofs.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
