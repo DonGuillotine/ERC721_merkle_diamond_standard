@@ -2,24 +2,23 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../libraries/LibDiamond.sol";
 
-contract MerkleFacet is Ownable {
-    bytes32 public merkleRoot;
-    mapping(address => bool) public claimed;
-
+contract MerkleFacet {
     event Claimed(address indexed claimant, uint256 amount);
 
-    function setMerkleRoot(bytes32 _merkleRoot) external onlyOwner {
-        merkleRoot = _merkleRoot;
+    function setMerkleRoot(bytes32 _merkleRoot) external {
+        LibDiamond.enforceIsContractOwner();
+        LibDiamond.diamondStorage().merkleRoot = _merkleRoot;
     }
 
     function claim(bytes32[] calldata _merkleProof, uint256 _amount) external {
-        require(!claimed[msg.sender], "Address already claimed");
+        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        require(!ds.claimed[msg.sender], "Address already claimed");
         bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _amount));
-        require(MerkleProof.verify(_merkleProof, merkleRoot, leaf), "Invalid proof");
+        require(MerkleProof.verify(_merkleProof, ds.merkleRoot, leaf), "Invalid proof");
 
-        claimed[msg.sender] = true;
+        ds.claimed[msg.sender] = true;
         emit Claimed(msg.sender, _amount);
     }
 }
